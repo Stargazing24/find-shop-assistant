@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>找店助手</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="topbar">🍜 找店助手 <span class="sub">学生找店 · 免登录</span></div>
+
+  <div class="container">
+    <div class="card">
+      <label for="query">想吃什么？告诉我你的需求</label>
+      <textarea id="query" placeholder="比如：30块以内、不辣、现在还开着的晚饭"></textarea>
+      <button class="btn" id="askBtn" style="margin-top:12px">找一找</button>
+      <div class="hint" id="quotaHint">每台设备最多可提问 20 次</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:14px;color:var(--muted);margin-bottom:4px">试试这些：</div>
+      <button class="example-btn" data-q="30块以内、不辣、现在还开着的晚饭">30块以内、不辣、现在还开着的晚饭</button>
+      <button class="example-btn" data-q="有没有素食">有没有素食</button>
+      <button class="example-btn" data-q="北门附近有什么面">北门附近有什么面</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <!-- 依赖：SDK + config + app.js + core.mjs -->
+  <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+  <script type="module">
+    import * as core from "./core.mjs";
+
+    const App = window.App;
+    const $ = (s) => document.querySelector(s);
+    const resultEl = $("#result");
+    const quotaHint = $("#quotaHint");
+
+    // 会话提问计数（仅前端 UX 提示，非安全边界）
+    let count = Number(localStorage.getItem("findshop_q_count") || 0);
+
+    function openBadge(status) {
+      if (status === true) return '<span class="badge open">营业中</span>';
+      if (status === false) return '<span class="badge closed">已打烊</span>';
+      return '<span class="badge unknown">营业时间未提供</span>';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function updateQuotaHint() {
+      const left = App.cfg.maxQuestionsPerSession - count;
+      quotaHint.textContent = `每台设备最多可提问 ${App.cfg.maxQuestionsPerSession} 次，剩余 ${Math.max(0, left)} 次`;
+    }
+    updateQuotaHint();
+
+    async function ask(q) {
+      if (count >= App.cfg.maxQuestionsPerSession) {
+        resultEl.innerHTML = '<div class="card error">本会话提问次数已达上限（' + App.cfg.maxQuestionsPerSession + ' 次），请稍后再试。</div>';
+        return;
+      }
+      resultEl.innerHTML = '<div class="card loading">正在为你找店…</div>';
+      try {
+        const { shops, dishes } = await App.loadAll();
+        const nowISO = new Date().toISOString();
+        const result = await core.runFindPipeline({
+          query: q,
+          nowISO,
+          shops,
+          dishes,
+          callLLM: App.callLLM,
+          includeDemo: true, // 有真实店铺后改为 false（DEMO_MODE）
+        });
+
+        count += 1;
+        localStorage.setItem("findshop_q_count", String(count));
+        updateQuotaHint();
+
+        render(result, q);
+
+        // 写日志（匿名 INSERT，不阻塞渲染）
+        App.logQuery({
+          query: q,
+          filters: result.filters,
+          parser: result.parser,
+          candidateShopIds: (result.candidates || []).map((c) => c.shopId),
+          answer: result.answer,
+          usedTemplate: result.usedTemplate,
+          templateReason: result.templateReason,
+          timings: result.timings,
+          promptVersions: result.promptVersions,
+          guard: result.guard,
+        }).catch(() => {});
+      } catch (e) {
+        console.error(e);
+        resultEl.innerHTML = '<div class="card error">请求失败：' + escapeHtml(e.message || String(e)) + "</div>";
+      }
+    }
+
+    function render(data, q) {
+      let html = '<div class="card"><div style="font-size:15px;white-space:pre-wrap">' + escapeHtml(data.answer || "") + "</div></div>";
+
+      if (data.candidates && data.candidates.length) {
+        html += '<div class="card" style="font-size:14px;color:var(--muted)">为你找到以下店铺：</div>';
+        for (const c of data.candidates) {
+          const dishesHtml = (c.matchedDishes || []).length
+            ? c.matchedDishes.map((d) => escapeHtml(d.name) + (d.price != null ? " ¥" + d.price : "")).join("、")
+            : "";
+          html += '<div class="shop-card">'
+            + '<div class="name">' + escapeHtml(c.shopName) + "</div>"
+            + (dishesHtml ? '<div class="meta">匹配菜品：' + dishesHtml + "</div>" : "")
+            + '<div class="meta">' + openBadge(c.openStatus) + "</div>"
+            + '<div class="meta" style="margin-top:6px"><a href="/shop.html?id=' + encodeURIComponent(c.shopId) + '">查看店铺 →</a></div>'
+            + "</div>";
+        }
+      }
+
+      // 营业时间未知的店
+      if (data.unknownHoursShopIds && data.unknownHoursShopIds.length) {
+        // 已在 answer 说明，无需额外展示
+      }
+
+      if (data.filters) {
+        html += '<details><summary>系统理解的条件</summary><div style="font-size:13px;color:var(--muted);margin-top:6px"><pre style="white-space:pre-wrap;font-family:inherit">' + escapeHtml(JSON.stringify(data.filters, null, 2)) + "</pre></div></details>";
+      }
+      resultEl.innerHTML = html;
+    }
+
+    $("#askBtn").addEventListener("click", () => {
+      const q = $("#query").value.trim();
+      if (q) ask(q);
+    });
+    $("#query").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#askBtn").click(); }
+    });
+    document.querySelectorAll(".example-btn").forEach((b) => {
+      b.addEventListener("click", () => { $("#query").value = b.dataset.q; ask(b.dataset.q); });
+    });
+  </script>
+</body>
+</html>

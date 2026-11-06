@@ -1,0 +1,9 @@
+# 口令配置文件（含敏感信息，绝不提交到版本库）
+config/secrets.json
+
+# 依赖
+node_modules/
+
+# 运行时
+*.log
+.DS_Store

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>评估页</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="topbar">📊 评估页 <span class="sub">管理员</span></div>
+
+  <div class="container">
+    <!-- 口令 -->
+    <div class="card" id="passBox">
+      <h2 style="font-size:20px;margin-bottom:12px">请输入管理员口令</h2>
+      <div class="pass-form">
+        <input type="password" id="pass" placeholder="管理员口令" autocomplete="off">
+        <button class="btn" id="enterBtn">进入</button>
+      </div>
+      <div class="error" id="err" style="display:none">口令错误，请重试</div>
+    </div>
+
+    <!-- 主功能区 -->
+    <div id="main" class="hidden">
+      <!-- 找店评估 -->
+      <div class="card">
+        <div class="section-title" style="margin-top:0">找店流水线评估</div>
+        <label>选择数据集</label>
+        <select id="splitSelect">
+          <option value="dev">dev（开发集，8 条）</option>
+          <option value="test">test（测试集，8 条）</option>
+          <option value="all">全部（16 条）</option>
+        </select>
+        <div class="hint" id="caseCount"></div>
+        <div class="hint" id="callCount"></div>
+        <button class="btn" id="runEvalBtn" style="margin-top:12px">运行评估</button>
+        <div id="evalProgress"></div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn secondary" id="downloadBtn" disabled>下载 JSON</button>
+        </div>
+      </div>
+
+      <!-- 识别评估 -->
+      <div class="card">
+        <div class="section-title" style="margin-top:0">菜单识别评估</div>
+        <input type="file" id="extractFile" accept="image/*">
+        <button class="btn secondary" id="runExtractBtn" style="margin-top:12px" disabled>运行识别</button>
+        <div id="extractResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+  <script type="module">
+    import * as core from "./core.mjs";
+
+    const App = window.App;
+    const $ = (s) => document.querySelector(s);
+
+    let passcode = "";
+    let allCases = [];
+    let lastEvalResults = [];   // 本次运行的结果（供下载）
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // ---- 口令 ----
+    async function verify() {
+      const pass = $("#pass").value;
+      if (!pass) return;
+      try {
+        const ok = await App.verifyPasscode("admin", pass);
+        if (ok) {
+          passcode = pass;
+          $("#passBox").classList.add("hidden");
+          $("#main").classList.remove("hidden");
+          await loadCases();
+        } else {
+          $("#err").style.display = "block";
+        }
+      } catch (e) {
+        console.error(e);
+        $("#err").textContent = "校验失败：" + (e.message || "网络错误");
+        $("#err").style.display = "block";
+      }
+    }
+    $("#enterBtn").addEventListener("click", verify);
+    $("#pass").addEventListener("keydown", (e) => { if (e.key === "Enter") verify(); });
+
+    async function loadCases() {
+      const res = await fetch("/cases.json");
+      allCases = (await res.json()).cases || [];
+      updateCount();
+    }
+    function selectedSplit() { return $("#splitSelect").value; }
+    function selectedCases() {
+      const sp = selectedSplit();
+      return sp === "all" ? allCases : allCases.filter((c) => c.split === sp);
+    }
+    function updateCount() {
+      const list = selectedCases();
+      $("#caseCount").textContent = "共 " + list.length + " 条用例";
+      // 每条：runFindPipeline 约 2-4 次 + B1 1 次 + B2 1 次 ≈ 4-6 次调用
+      $("#callCount").textContent = "预计模型调用次数约 " + (list.length * 5) + " 次（含解析、回答、两个基线）";
+    }
+    $("#splitSelect").addEventListener("change", updateCount);
+
+    // ---- 运行找店评估 ----
+    $("#runEvalBtn").addEventListener("click", async () => {
+      const list = selectedCases();
+      if (!list.length) { alert("没有用例"); return; }
+      const { shops, dishes } = await App.loadAll();
+      $("#runEvalBtn").disabled = true;
+      $("#downloadBtn").disabled = true;
+      lastEvalResults = [];
+      $("#evalProgress").innerHTML = "";
+
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        $("#evalProgress").innerHTML = '<div class="loading">运行中 ' + (i + 1) + "/" + list.length + "：" + escapeHtml(c.id) + " …</div>";
+        try {
+          const pipeline = await core.runFindPipeline({ query: c.query, nowISO: c.now, shops, dishes, callLLM: App.callLLM, includeDemo: true });
+          const b1 = await core.runBaseline({ mode: "B1", query: c.query, nowISO: c.now, shops, dishes, callLLM: App.callLLM });
+          const b2 = await core.runBaseline({ mode: "B2", query: c.query, nowISO: c.now, shops, dishes, callLLM: App.callLLM });
+
+          const record = {
+            case_id: c.id,
+            split: c.split,
+            type: c.type,
+            model: App.cfg.model,
+            ran_at: new Date().toISOString(),
+            pipeline: {
+              query: c.query,
+              now: c.now,
+              expected_filters: c.expected_filters,
+              expected_shop_ids: c.expected_shop_ids,
+              parser: pipeline.parser,
+              parseFirstTryOk: pipeline.parseFirstTryOk,
+              filters: pipeline.filters,
+              candidate_shop_ids: (pipeline.candidates || []).map((x) => x.shopId),
+              answer: pipeline.answer,
+              usedTemplate: pipeline.usedTemplate,
+              guard: pipeline.guard,
+              timings: pipeline.timings,
+            },
+            b1: { answer: b1.answer, guard: b1.guard, mentionedShopIds: b1.mentionedShopIds, timings: b1.timings },
+            b2: { answer: b2.answer, guard: b2.guard, mentionedShopIds: b2.mentionedShopIds, timings: b2.timings },
+          };
+          lastEvalResults.push(record);
+
+          // 存数据库（管理员口令校验）
+          await App.cloud.database.rpc("insert_eval", {
+            p_passcode: passcode,
+            p_case_id: c.id,
+            p_split: c.split,
+            p_case_type: c.type,
+            p_model: App.cfg.model,
+            p_pipeline: record.pipeline,
+            p_b1: record.b1,
+            p_b2: record.b2,
+          });
+        } catch (e) {
+          console.error("用例 " + c.id + " 失败:", e);
+          $("#evalProgress").insertAdjacentHTML("beforeend", '<div class="error">' + escapeHtml(c.id) + " 失败：" + escapeHtml(e.message || String(e)) + "</div>");
+        }
+      }
+
+      $("#evalProgress").innerHTML = '<div class="success">运行完成，共 ' + lastEvalResults.length + " 条结果。</div>";
+      $("#downloadBtn").disabled = lastEvalResults.length === 0;
+      $("#runEvalBtn").disabled = false;
+    });
+
+    $("#downloadBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(lastEvalResults, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "eval_results_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ---- 识别评估 ----
+    $("#extractFile").addEventListener("change", async (e) => {
+      const f = e.target.files[0];
+      $("#runExtractBtn").disabled = !f;
+    });
+    $("#runExtractBtn").addEventListener("click", async () => {
+      const f = $("#extractFile").files[0];
+      if (!f) return;
+      const dataUrl = await App.compressImage(f, 1600, 0.85);
+      $("#extractResult").innerHTML = '<div class="loading">识别中…</div>';
+      try {
+        const ex = await core.runExtraction({ images: [dataUrl], callLLM: App.callLLM });
+        let html = '<div class="success" style="margin-top:8px">识别结果（' + (ex.dishes || []).length + " 道）：</div>";
+        if (ex.dishes && ex.dishes.length) {
+          html += '<table style="margin-top:8px"><tr><th>菜品</th><th>价格</th><th>辣度</th><th>素食</th><th>置信度</th></tr>';
+          for (const d of ex.dishes) {
+            html += "<tr><td>" + escapeHtml(d.name) + "</td>"
+              + "<td>" + (d.price != null ? "¥" + d.price : "未提供") + "</td>"
+              + "<td>" + (d.spicy_level != null ? d.spicy_level : "未提供") + "</td>"
+              + "<td>" + (d.is_vegetarian === true ? "是" : d.is_vegetarian === false ? "否" : "—") + "</td>"
+              + "<td>" + (d.confidence != null ? d.confidence.toFixed(2) : "—") + "</td></tr>";
+          }
+          html += "</table>";
+        } else {
+          html += '<div class="hint">识别失败：' + escapeHtml((ex.errors || []).join("、")) + "</div>";
+        }
+        html += '<div class="hint" style="margin-top:8px">原始输出：<pre style="white-space:pre-wrap;font-family:inherit">' + escapeHtml(ex.raw || "") + "</pre></div>";
+        $("#extractResult").innerHTML = html;
+      } catch (e) {
+        $("#extractResult").innerHTML = '<div class="error">识别失败：' + escapeHtml(e.message || String(e)) + "</div>";
+      }
+    });
+  </script>
+</body>
+</html>

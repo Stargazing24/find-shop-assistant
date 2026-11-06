@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>店铺主页</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="topbar"><a href="/">🍜 找店助手</a> <span class="sub">店铺主页</span></div>
+
+  <div class="container" id="content">
+    <div class="card loading">加载中…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+  <script type="module">
+    import * as core from "./core.mjs";
+
+    const App = window.App;
+    const $ = (s) => document.querySelector(s);
+    const content = $("#content");
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function na(s) { return (s === null || s === undefined || s === "") ? '<span class="na">未提供</span>' : escapeHtml(s); }
+    function naNum(s) { return (s === null || s === undefined) ? '<span class="na">未提供</span>' : escapeHtml(s); }
+
+    const WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    const SPICY_CN = { 0: "不辣", 1: "微辣", 2: "中辣", 3: "特辣" };
+
+    async function main() {
+      const id = new URLSearchParams(location.search).get("id");
+      if (!id) {
+        content.innerHTML = '<div class="card">缺少店铺 id。<div style="margin-top:12px"><a href="/">返回找店 →</a></div></div>';
+        return;
+      }
+
+      const nowISO = new Date().toISOString();
+
+      try {
+        const { shops, dishes } = await App.loadAll();
+        // RLS 已保证只返回 verified=true 的店；demo-s6（verified=false）不会出现在结果里
+        const shop = shops.find((s) => s.id === id);
+        if (!shop) {
+          content.innerHTML = '<div class="card"><div style="font-size:15px">这家店不存在或尚未核实。</div><div style="margin-top:12px"><a href="/">返回找店 →</a></div></div>';
+          return;
+        }
+        const shopDishes = dishes.filter((d) => d.shop_id === id);
+
+        const openState = core.isOpen(shop, nowISO);
+        const hoursText = core.todayHours(shop, nowISO);
+
+        let html = '<div class="card">';
+        html += '<div style="font-size:20px;font-weight:700">' + escapeHtml(shop.name);
+        if (shop.is_demo) html += '<span class="badge demo">演示数据</span>';
+        html += "</div>";
+
+        let openHtml;
+        if (openState === true) openHtml = '<span class="badge open">营业中</span>';
+        else if (openState === false) openHtml = '<span class="badge closed">已打烊</span>';
+        else openHtml = '<span class="badge unknown">营业时间未提供</span>';
+        html += '<div class="meta" style="margin-top:8px">' + openHtml + ' <span style="color:var(--muted)">今日：' + escapeHtml(hoursText) + "</span></div>";
+        html += "</div>";
+
+        // 基本信息
+        html += '<div class="card">';
+        html += '<div class="section-title" style="margin-top:0">基本信息</div>';
+        html += '<div class="meta"><strong>菜系：</strong>' + (shop.cuisine && shop.cuisine.length ? escapeHtml(shop.cuisine.join("、")) : '<span class="na">未提供</span>') + "</div>";
+        html += '<div class="meta"><strong>区域：</strong>' + na(shop.area) + "</div>";
+        html += '<div class="meta"><strong>地址：</strong>' + na(shop.address) + "</div>";
+        html += '<div class="meta"><strong>人均：</strong>' + naNum(shop.avg_price) + "</div>";
+        html += '<div class="meta"><strong>服务：</strong>' + (shop.services && shop.services.length ? escapeHtml(shop.services.join("、")) : '<span class="na">未提供</span>') + "</div>";
+        html += '<div class="meta"><strong>简介：</strong>' + na(shop.description) + "</div>";
+        html += '<div class="meta"><strong>联系方式：</strong>' + na(shop.contact) + "</div>";
+        html += "</div>";
+
+        // 营业时间
+        html += '<div class="card">';
+        html += '<div class="section-title" style="margin-top:0">营业时间</div>';
+        const hours = shop.opening_hours || [];
+        if (hours.length === 0) {
+          html += '<div class="na">未提供</div>';
+        } else {
+          html += '<table><tr><th>星期</th><th>时间</th></tr>';
+          for (const r of hours) {
+            html += '<tr><td>' + WEEKDAY_CN[r.weekday] + "</td><td>" + escapeHtml(r.open + " – " + r.close) + "</td></tr>";
+          }
+          html += "</table>";
+        }
+        html += "</div>";
+
+        // 菜单
+        html += '<div class="card">';
+        html += '<div class="section-title" style="margin-top:0">菜单（' + shopDishes.length + " 道）</div>";
+        if (shopDishes.length === 0) {
+          html += '<div class="na">暂无菜单</div>';
+        } else {
+          html += '<table><tr><th>菜品</th><th>价格</th><th>辣度</th><th>素食</th></tr>';
+          for (const d of shopDishes) {
+            const spicy = d.spicy_level != null ? SPICY_CN[d.spicy_level] : '<span class="na">未提供</span>';
+            const veg = d.is_vegetarian === true ? "是" : d.is_vegetarian === false ? "否" : '<span class="na">—</span>';
+            html += '<tr><td>' + escapeHtml(d.name) + (d.is_signature ? ' <span class="badge">招牌</span>' : "") + "</td>"
+              + '<td>' + (d.price != null ? "¥" + d.price : '<span class="na">未提供</span>') + "</td>"
+              + "<td>" + spicy + "</td>"
+              + "<td>" + veg + "</td></tr>";
+          }
+          html += "</table>";
+        }
+        html += "</div>";
+
+        html += '<div style="text-align:center;margin-top:8px"><a href="/">← 返回找店</a></div>';
+        content.innerHTML = html;
+      } catch (e) {
+        console.error(e);
+        content.innerHTML = '<div class="card error">加载失败：' + escapeHtml(e.message || String(e)) + "</div>";
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
