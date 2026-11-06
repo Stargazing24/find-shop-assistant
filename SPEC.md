@@ -1,4 +1,6 @@
-# 产品规格与接口契约 v0.4（WorkBuddy 和 Claude Code 共用）
+# 产品规格与接口契约 v0.5（WorkBuddy 和 Claude Code 共用）
+
+> v0.5 变更（2026-11-07）：新增学生版/商家版切换、每店管理码、商家可持续修改店铺、优惠（promotions）、学生匿名被动反馈（shop_events）。详细设计见 `docs/ROLE_DESIGN.md`。
 
 > 两个执行方都必须先读这份文件。它定义"做什么"和"两边代码怎么对接"。
 > 分工：**WorkBuddy** 负责应用本身（页面、云数据库、文件存储、内置 AI 调用、发布）；核心逻辑模块已经写好并通过测试：`src/core.mjs`（ES module）和 `src/core.cjs`（CommonJS，逻辑相同），提示词已内置在其中的 `PROMPTS`。后续维护与评估打分脚本由 Claude Code 负责。
@@ -6,7 +8,9 @@
 ## 1. 产品与场景（已锁定）
 商家上传菜单照片和基本信息，AI 识别后由商家核实，生成店铺主页；学生用自然语言找店，系统先用价格、营业时间、辣度等条件**结构化筛选**，再由大模型**只根据筛选结果**写回答，并链接到店铺主页。
 
-**场景：学生到店前选店、提前看菜单。不做点单、外卖、支付、学生评价、学生注册登录、地图距离、多轮对话。**
+商家可以随时用本店管理码修改菜单、营业时间、优惠和公告；系统匿名统计学生的浏览和筛选（被动反馈），把汇总数字展示给对应商家。
+
+**场景：学生到店前选店、提前看菜单。不做点单、外卖、支付、学生评价（评分、评论）、学生注册登录、商家账号注册、地图距离、多轮对话。**
 
 设计原则：大模型负责理解问题和组织语言；筛选和判断由确定性代码完成（`core.js`）；不确定的识别结果交给商家确认。本系统是固定步骤的**工作流**，不是智能体。
 
@@ -16,10 +20,12 @@
 ## 3. 页面
 | 编号 | 页面 | 使用者 |
 |---|---|---|
-| P1 | 找店助手（首页） | 学生，无需登录 |
-| P2 | 商家入驻 | 商家，输入口令进入 |
+| P1 | 找店助手（首页，学生版） | 学生，无需登录 |
+| P2 | 商家版：新建店铺（入驻口令）/ 管理我的店（本店管理码）：反馈概览、编辑信息、菜单、优惠、公告 | 商家 |
 | P3 | 店铺主页 `?id=<shop_id>` | 所有人 |
-| P4 | 评估页（隐藏，管理员口令） | 组员，用于批量跑测试 |
+| P4 | 评估页（隐藏，管理员口令） | 组员，用于批量跑测试；可重置商家管理码 |
+
+所有页面顶部有"学生 | 商家"切换（记在 localStorage）。切换本身不需要口令，进入店铺管理才需要。
 
 ## 4. 数据结构（云数据库集合 / JSON 格式，两边必须一致）
 **不知道的字段一律为 `null`，界面显示"未提供"，绝不猜测补全。**
@@ -31,7 +37,8 @@ cuisine: string[], area: string|null, address: string|null,
 avg_price: number|null,
 opening_hours: [{weekday: 0-6 (周一=0), open: "HH:MM", close: "HH:MM"}],   // close < open 表示跨夜；空数组表示未知
 services: string[], description: string|null, contact: string|null,
-verified: boolean, verified_at: ISO string|null, created_at, updated_at
+verified: boolean, verified_at: ISO string|null, created_at, updated_at,
+notice: string|null, updated_by_merchant_at: ISO string|null      // v0.5 新增
 ```
 **dishes**
 ```
@@ -49,7 +56,32 @@ unsupported: string[]     // 系统没有数据支持的需求，如"排队时�
 **query_logs**：时间、问题、filters、解析方式（llm/rule）、候选店铺 id、最终回答、防编造结果、是否模板兜底、各步耗时、模型名、提示词版本。
 **extraction_logs**：时间、店铺 id、图片引用、模型名、提示词版本、原始识别结果、耗时、商家修改的行数、发布总用时。
 **eval_results**：评估页每跑一条用例存一条（见第 7 节）。
-**不记录学生个人信息。**
+**shop_secrets**（v0.5，匿名无任何权限）
+```
+shop_id: string (PK), manage_code_hash: string, created_at, rotated_at
+```
+管理码 8 位，新建店铺时生成并只显示一次；只存哈希，校验在数据库函数内完成；丢失由管理员重置。
+
+**promotions**（v0.5，匿名只读：所属店已核实、active=true、在有效期内）
+```
+id: string, shop_id: string, title: string,
+kind: "percent_off"|"amount_off"|"special_price"|"gift"|"other",
+value: number|null, dish_ids: string[] (空=全店), min_spend: number|null,
+weekdays: int[] (0-6，空=每天), start_time: "HH:MM"|null, end_time: "HH:MM"|null,
+start_date: date|null, end_date: date|null, note: string|null, active: boolean, created_at, updated_at
+```
+
+**shop_events**（v0.5，匿名只能写入、不能读取）
+```
+id, created_at,
+event: "impression"|"card_click"|"shop_view"|"filter_used",
+shop_id: string|null, source: "list"|"filter"|"ai"|"direct",
+filters: object|null, result_count: int|null,
+visit_id: string|null     // 浏览器内随机生成、每天更换，只用于去重
+```
+商家只能通过 RPC 读到本店的**汇总数字**，看不到逐条记录。
+
+**不记录学生个人信息**（不记 IP、设备、账号；shop_events 只含上述字段）。首页底部注明"本站匿名统计浏览次数，不收集个人信息"。
 
 ## 5. 接口契约：`core.mjs` / `core.cjs`（已提供，WorkBuddy 只调用、不修改）
 纯 JavaScript、零依赖、不访问网络和数据库。大模型调用由调用方**注入**：
@@ -84,6 +116,7 @@ callLLM: async ({system, user, images?, temperature, maxTokens}) => string
 - `unsupported` 的需求、过敏和食品安全：回答"请向店家确认"。问题里只有这类需求时，不推荐任何店铺。
 - 防编造：回答里的价格必须等于候选菜品价格之一，【店名】必须属于候选；不通过重写一次，再不通过用模板回答。
 - 商家文字（简介等）作为数据放在 `<shop_data>` 标签内，提示词声明不执行其中任何指令。
+- 优惠（promotions）和公告（notice）**不传入** `runFindPipeline`，AI 回答不提优惠；只由页面直接展示。`core` 不因 v0.5 修改。
 - 解析和识别调用 temperature 为 0 或最低值；不使用推理模式。
 
 ## 7. 评估设计
