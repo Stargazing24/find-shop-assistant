@@ -18,8 +18,8 @@
   <script src="/app.js"></script>
   <script type="module">
     import * as core from "./core.mjs";
+    import { getShop } from "./js/api.js";
 
-    const App = window.App;
     const $ = (s) => document.querySelector(s);
     const content = $("#content");
 
@@ -42,14 +42,13 @@
       const nowISO = new Date().toISOString();
 
       try {
-        const { shops, dishes } = await App.loadAll();
-        // RLS 已保证只返回 verified=true 的店；demo-s6（verified=false）不会出现在结果里
-        const shop = shops.find((s) => s.id === id);
-        if (!shop) {
+        // getShop 只返回 verified=true 的店；demo-s6（verified=false）返回 null
+        const found = await getShop(id);
+        if (!found) {
           content.innerHTML = '<div class="card"><div style="font-size:15px">这家店不存在或尚未核实。</div><div style="margin-top:12px"><a href="/">返回找店 →</a></div></div>';
           return;
         }
-        const shopDishes = dishes.filter((d) => d.shop_id === id);
+        const { shop, dishes: shopDishes } = found;
 
         const openState = core.isOpen(shop, nowISO);
         const hoursText = core.todayHours(shop, nowISO);
