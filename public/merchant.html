@@ -2,366 +2,416 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>商家入驻</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商家版</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="topbar">🏪 商家入驻 <span class="sub">上传菜单 · AI 识别 · 发布主页</span></div>
+  <header id="topbar"></header>
 
   <div class="container">
-    <!-- 口令 -->
-    <div class="card" id="passBox">
-      <h2 style="font-size:20px;margin-bottom:12px">请输入商家口令</h2>
-      <div class="pass-form">
-        <input type="password" id="pass" placeholder="商家口令" autocomplete="off">
-        <button class="btn" id="enterBtn">进入</button>
+    <!-- ========== 进入 ========== -->
+    <section id="vEntry">
+      <div class="card">
+        <div class="section-title" style="margin-top:0">管理我的店</div>
+        <div class="hint" style="margin-top:0;margin-bottom:8px">输入开店时拿到的 8 位店铺管理码。</div>
+        <div class="pass-form">
+          <input type="text" id="codeInput" placeholder="店铺管理码" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button class="btn" id="codeBtn">进入</button>
+        </div>
+        <div class="error hidden" id="codeErr"></div>
       </div>
-      <div class="error" id="err" style="display:none">口令错误，请重试</div>
-    </div>
-
-    <!-- 主功能区 -->
-    <div id="main" class="hidden">
-      <!-- 第 1 步：上传菜单照片 -->
-      <div class="card" id="step1">
-        <div class="section-title" style="margin-top:0">第 1 步：上传菜单照片</div>
-        <input type="file" id="menuFiles" accept="image/*" multiple style="margin-top:8px">
-        <div class="hint">可上传 1–3 张菜单照片，AI 会自动识别菜品和价格</div>
-        <div id="imgPreview"></div>
-        <button class="btn secondary" id="recognizeBtn" style="margin-top:12px" disabled>识别菜单</button>
-        <div class="hint" id="recogStatus"></div>
+      <div class="card">
+        <div class="section-title" style="margin-top:0">入驻新店</div>
+        <div class="hint" style="margin-top:0;margin-bottom:8px">把你的微信群菜单搬到这里：拍照上传菜单，AI 识别后核对，生成店铺主页。需要平台提供的入驻口令。</div>
+        <div class="pass-form">
+          <input type="password" id="joinInput" placeholder="入驻口令" autocomplete="off">
+          <button class="btn secondary" id="joinBtn">开始</button>
+        </div>
+        <div class="hint" id="joinHint"></div>
       </div>
+    </section>
 
-      <!-- 第 2 步：编辑识别结果 -->
-      <div class="card hidden" id="step2">
-        <div class="section-title" style="margin-top:0">第 2 步：核对并编辑菜品</div>
-        <div class="hint">标记「请确认」的行需要你核实后再发布；可增删改行、设置辣度/素食/招牌。</div>
-        <div id="dishTableWrap" style="overflow-x:auto;margin-top:10px"></div>
-        <button class="btn secondary" id="addRowBtn" style="margin-top:10px">+ 手动添加一道菜</button>
+    <!-- ========== 新建店铺 ========== -->
+    <section id="vNew" class="hidden">
+      <div class="card">
+        <div class="section-title" style="margin-top:0">第 1 步：拍照识别菜单（可跳过）</div>
+        <div id="newPhoto"></div>
       </div>
-
-      <!-- 第 3 步：基本信息 -->
-      <div class="card hidden" id="step3">
-        <div class="section-title" style="margin-top:0">第 3 步：店铺基本信息</div>
-
-        <label for="shopName">店名 <span style="color:var(--red)">*</span></label>
-        <input type="text" id="shopName" placeholder="必填">
-
-        <label for="cuisine">菜系（用顿号分隔，如：粤菜、面食）</label>
-        <input type="text" id="cuisine" placeholder="选填">
-
-        <label for="area">区域</label>
-        <select id="area"><option value="">未提供</option><option>北门</option><option>南门</option><option>东门</option><option>西门</option></select>
-
-        <label for="address">地址</label>
-        <input type="text" id="address" placeholder="选填">
-
-        <label for="avgPrice">人均价格（元）</label>
-        <input type="number" id="avgPrice" placeholder="选填" min="0" step="1">
-
-        <label>营业时间</label>
-        <div class="hint" style="margin-top:0">勾选「每天相同」可只填一天，其余自动复制</div>
-        <label style="margin-top:8px"><input type="checkbox" id="sameEveryday" checked> 每天相同</label>
-        <div id="hoursEditor"></div>
-
-        <label for="services">服务方式（用顿号分隔，如：堂食、自取、外卖）</label>
-        <input type="text" id="services" placeholder="选填，如：堂食、自取">
-
-        <label for="description">简介</label>
-        <textarea id="description" placeholder="选填，一句话介绍你的店"></textarea>
-
-        <label for="contact">联系方式</label>
-        <input type="text" id="contact" placeholder="选填">
-
-        <div id="publishError" class="error" style="display:none"></div>
+      <div class="card">
+        <div class="section-title" style="margin-top:0">第 2 步：核对菜品</div>
+        <div class="hint" style="margin-top:0">标"请确认"的行需要核对后才能发布。</div>
+        <div id="newDishes" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin-top:0">第 3 步：店铺信息</div>
+        <div id="newInfo"></div>
+        <div class="error hidden" id="newErr"></div>
         <button class="btn" id="publishBtn" style="margin-top:16px">发布店铺主页</button>
-        <div id="publishResult"></div>
+        <button class="btn secondary" id="newCancel" style="margin-top:8px">返回</button>
       </div>
-    </div>
+    </section>
+
+    <!-- ========== 发布成功：显示管理码 ========== -->
+    <section id="vCode" class="hidden">
+      <div class="card">
+        <div class="success" style="font-size:16px;margin-top:0">发布成功！</div>
+        <div style="margin-top:8px">这是你的<strong>店铺管理码</strong>，以后修改菜单、营业时间、优惠都要用它：</div>
+        <div class="code-box" id="newCode"></div>
+        <div class="error" style="margin-top:0">只显示这一次，请立即截图或抄下来。丢失后需要联系平台管理员重置。</div>
+        <button class="btn" id="toDash" style="margin-top:12px">进入我的店铺</button>
+      </div>
+    </section>
+
+    <!-- ========== 我的店铺 ========== -->
+    <section id="vDash" class="hidden">
+      <div class="card" style="padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div><div style="font-size:18px;font-weight:700" id="dName"></div><div class="meta" id="dMeta" style="font-size:13px;color:var(--muted)"></div></div>
+          <div class="row-actions" style="flex-shrink:0"><a class="btn-sm" id="dPreview" target="_blank">预览主页</a><button class="btn-sm" id="dLogout">退出</button></div>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="stats" aria-selected="true">数据反馈</button>
+        <button role="tab" data-tab="info" aria-selected="false">店铺信息</button>
+        <button role="tab" data-tab="menu" aria-selected="false">菜单</button>
+        <button role="tab" data-tab="promo" aria-selected="false">优惠</button>
+      </div>
+
+      <div data-panel="stats">
+        <div class="row-actions" style="margin-bottom:10px">
+          <button class="btn-sm primary" data-days="7">近 7 天</button>
+          <button class="btn-sm" data-days="30">近 30 天</button>
+        </div>
+        <div id="statsBox"><div class="card loading">加载中…</div></div>
+      </div>
+
+      <div data-panel="info" class="hidden">
+        <div class="card">
+          <div id="editInfo"></div>
+          <div class="error hidden" id="infoErr"></div>
+          <button class="btn" id="saveInfo" style="margin-top:16px">保存店铺信息</button>
+          <div class="success hidden" id="infoOk">已保存，学生端刷新即可看到。</div>
+        </div>
+      </div>
+
+      <div data-panel="menu" class="hidden">
+        <div class="card">
+          <div class="section-title" style="margin-top:0">拍照添加菜品</div>
+          <div id="editPhoto"></div>
+        </div>
+        <div class="card">
+          <div class="section-title" style="margin-top:0">菜单</div>
+          <div id="editDishes"></div>
+          <div class="error hidden" id="menuErr"></div>
+          <button class="btn" id="saveMenu" style="margin-top:16px">保存菜单</button>
+          <div class="success hidden" id="menuOk">已保存。</div>
+        </div>
+      </div>
+
+      <div data-panel="promo" class="hidden">
+        <div class="card">
+          <div class="section-title" style="margin-top:0">我的优惠</div>
+          <div id="promoList"></div>
+          <button class="btn secondary" id="promoNew" style="margin-top:10px">+ 新建优惠</button>
+        </div>
+        <div class="card hidden" id="promoForm">
+          <div class="section-title" style="margin-top:0" id="promoFormTitle">新建优惠</div>
+          <label>标题 <span style="color:var(--red)">*</span></label>
+          <input type="text" id="pTitle" placeholder="如：午市套餐 8 折、满 30 减 5、第二份半价">
+          <div class="inline-fields">
+            <div><label>类型</label><select id="pKind">
+              <option value="percent_off">折扣</option><option value="amount_off">满减</option>
+              <option value="special_price">特价</option><option value="gift">赠送</option><option value="other">其他</option></select></div>
+            <div><label id="pValueLbl">数值</label><input type="number" id="pValue" min="0" step="0.1" placeholder="选填"></div>
+            <div><label>满多少可用（元）</label><input type="number" id="pMin" min="0" step="1" placeholder="选填"></div>
+          </div>
+          <label>适用菜品（不选 = 全店）</label>
+          <div id="pDishes"></div>
+          <label>适用星期（不选 = 每天）</label>
+          <div id="pWeekdays"></div>
+          <div class="inline-fields">
+            <div><label>时段开始</label><input type="time" id="pStartT"></div>
+            <div><label>时段结束</label><input type="time" id="pEndT"></div>
+          </div>
+          <div class="inline-fields">
+            <div><label>开始日期</label><input type="date" id="pStartD"></div>
+            <div><label>结束日期</label><input type="date" id="pEndD"></div>
+          </div>
+          <label>补充说明</label>
+          <input type="text" id="pNote" placeholder="选填，如：仅限堂食">
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="pActive" checked> 立即上架</label>
+          <div class="error hidden" id="promoErr"></div>
+          <div class="actions">
+            <button class="btn secondary" id="promoCancel">取消</button>
+            <button class="btn" id="promoSave">保存优惠</button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
   <script src="/config.js"></script>
   <script src="/app.js"></script>
   <script type="module">
-    import * as core from "./core.mjs";
+    import * as api from "./js/api.js";
+    import { renderNav } from "./js/nav.js";
+    import { createPhotoRecognizer, createDishEditor, createInfoForm } from "./js/shop-editor.js";
+    import { esc, WEEKDAY_CN, PROMO_KINDS, isPromoActive, promoWhen, promoValueText } from "./js/util.js";
+    renderNav("merchant", "商家版");
 
-    const App = window.App;
     const $ = (s) => document.querySelector(s);
+    const show = (el, on = true) => el.classList.toggle("hidden", !on);
+    const views = ["vEntry", "vNew", "vCode", "vDash"];
+    const go = (v) => { views.forEach((x) => show($("#" + x), x === v)); window.scrollTo(0, 0); };
 
-    const SPICY_CN = ["不辣", "微辣", "中辣", "特辣"];
-    const WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    let code = "";      // 管理码只在内存里，刷新页面需重新输入
+    let mine = null;    // {shop, dishes, promotions}
+    let days = 7;
 
-    let dishes = [];           // 当前识别/编辑的菜品（含 confidence）
-    let pendingImages = [];    // 已压缩的 base64 图片
-    let passcode = "";         // 口令（仅本次会话内存，用于发布时传给 RPC）
-    let startTime = 0;         // 计时
+    // ================= 进入 =================
+    if (api.BACKEND === "local") $("#joinHint").textContent = "本地演示模式：入驻口令随便填即可。";
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    }
-
-    // ---- 口令 ----
-    async function verify() {
-      const pass = $("#pass").value;
-      if (!pass) return;
+    async function enter(c) {
+      $("#codeErr").classList.add("hidden");
       try {
-        const ok = await App.verifyPasscode("merchant", pass);
-        if (ok) {
-          passcode = pass;
-          sessionStorage.setItem("merchant_authed", "1");
-          $("#passBox").classList.add("hidden");
-          $("#main").classList.remove("hidden");
-        } else {
-          $("#err").style.display = "block";
-        }
+        const r = await api.openMyShop(c);
+        if (!r) { $("#codeErr").textContent = "管理码不正确，请检查后重试。"; show($("#codeErr")); return; }
+        code = c; mine = r;
+        go("vDash");
+        renderDash();
       } catch (e) {
         console.error(e);
-        $("#err").textContent = "校验失败：" + (e.message || "网络错误");
-        $("#err").style.display = "block";
+        $("#codeErr").textContent = "进入失败：" + (e.message || String(e));
+        show($("#codeErr"));
       }
     }
-    $("#enterBtn").addEventListener("click", verify);
-    $("#pass").addEventListener("keydown", (e) => { if (e.key === "Enter") verify(); });
+    $("#codeBtn").addEventListener("click", () => { const c = $("#codeInput").value.trim().toUpperCase(); if (c) enter(c); });
+    $("#codeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#codeBtn").click(); });
 
-    // ---- 上传与识别 ----
-    async function onFilesChange(e) {
-      pendingImages = [];
-      $("#imgPreview").innerHTML = "";
-      const files = Array.from(e.target.files || []).slice(0, 3);
-      $("#recognizeBtn").disabled = files.length === 0;
-      for (const f of files) {
-        const dataUrl = await App.compressImage(f, 1600, 0.85);
-        pendingImages.push(dataUrl);
-        $("#imgPreview").insertAdjacentHTML("beforeend", '<img class="img-preview" src="' + dataUrl + '">');
-      }
-      $("#recogStatus").textContent = files.length ? "已选择 " + files.length + " 张，点击「识别菜单」" : "";
-    }
-    $("#menuFiles").addEventListener("change", onFilesChange);
+    // ================= 新建店铺 =================
+    let joinPass = "", t0 = 0, exLog = null;
+    const newDishes = createDishEditor($("#newDishes"));
+    const newInfo = createInfoForm($("#newInfo"));
+    createPhotoRecognizer($("#newPhoto"), (dishes, log) => { newDishes.append(dishes); exLog = log; });
 
-    $("#recognizeBtn").addEventListener("click", async () => {
-      if (!pendingImages.length) return;
-      $("#recogStatus").textContent = "识别中，请稍候…";
-      startTime = Date.now();
-      try {
-        const ex = await core.runExtraction({ images: pendingImages, callLLM: App.callLLM });
-        const totalSeconds = (Date.now() - startTime) / 1000;
-        if (!ex.ok || !ex.dishes.length) {
-          $("#recogStatus").textContent = "识别失败（" + (ex.errors.join("、") || "未识别到菜品") + "），你可以点击下方「手动添加」录入菜品。";
-          dishes = [];
-        } else {
-          dishes = ex.dishes.map((d) => ({
-            id: "dish_" + Math.random().toString(36).slice(2, 10),
-            name: d.name,
-            price: d.price,
-            category: d.category,
-            spicy_level: d.spicy_level,
-            is_vegetarian: d.is_vegetarian,
-            is_signature: d.is_signature === true,
-            confidence: d.confidence ?? 0.5,
-            source: "menu_photo",
-            vendor_confirmed: false,
-          }));
-          $("#recogStatus").textContent = "识别到 " + dishes.length + " 道菜（耗时 " + totalSeconds.toFixed(1) + " 秒）。请核对下面的内容。";
-          window._extractionLog = {
-            raw: ex.raw,
-            timings: ex.timings,
-            attempts: ex.attempts,
-            firstTryOk: ex.firstTryOk,
-            promptVersion: ex.promptVersion,
-          };
-        }
-        $("#step2").classList.remove("hidden");
-        renderDishTable();
-      } catch (e) {
-        console.error(e);
-        $("#recogStatus").textContent = "识别失败：" + (e.message || String(e));
-      }
+    $("#joinBtn").addEventListener("click", () => {
+      joinPass = $("#joinInput").value;
+      if (!joinPass && api.BACKEND !== "local") return;
+      t0 = Date.now();
+      newDishes.set([]); newInfo.set({});
+      go("vNew");
     });
+    $("#newCancel").addEventListener("click", () => go("vEntry"));
 
-    // ---- 菜品编辑表格 ----
-    function renderDishTable() {
-      const wrap = $("#dishTableWrap");
-      if (!dishes.length) {
-        wrap.innerHTML = '<div class="hint" style="margin-top:8px">暂无菜品，点击下方「手动添加一道菜」。</div>';
-        return;
-      }
-      let html = '<table><tr><th>菜品名</th><th>价格</th><th>辣度</th><th>素食</th><th>招牌</th><th>操作</th></tr>';
-      dishes.forEach((d, i) => {
-        const needConfirm = (d.confidence != null && d.confidence < 0.8) ? '<span class="confirm-flag">请确认</span>' : "";
-        html += '<tr data-i="' + i + '">'
-          + '<td><input type="text" data-field="name" value="' + escapeHtml(d.name) + '">' + needConfirm + "</td>"
-          + '<td><input type="number" data-field="price" value="' + (d.price ?? "") + '" style="width:70px" min="0" step="0.5"></td>'
-          + '<td><select data-field="spicy_level">'
-            + ["未提供", "不辣", "微辣", "中辣", "特辣"].map((s, si) => '<option value="' + (si - 1) + '"' + ((d.spicy_level ?? null) === (si - 1) ? " selected" : "") + ">" + s + "</option>").join("")
-          + "</select></td>"
-          + '<td><select data-field="is_vegetarian">'
-            + '<option value="">未提供</option>'
-            + '<option value="true"' + (d.is_vegetarian === true ? " selected" : "") + '>是</option>'
-            + '<option value="false"' + (d.is_vegetarian === false ? " selected" : "") + '>否</option>'
-          + "</select></td>"
-          + '<td><input type="checkbox" data-field="is_signature"' + (d.is_signature ? " checked" : "") + "></td>"
-          + '<td><a href="#" data-del="' + i + '" style="color:var(--red)">删除</a></td>'
-          + "</tr>";
-      });
-      html += "</table>";
-      wrap.innerHTML = html;
-
-      // 绑定编辑
-      wrap.querySelectorAll("input, select").forEach((el) => {
-        el.addEventListener("change", () => {
-          const i = Number(el.closest("tr").dataset.i);
-          const field = el.dataset.field;
-          const d = dishes[i];
-          if (field === "name") d.name = el.value.trim();
-          else if (field === "price") d.price = el.value === "" ? null : Number(el.value);
-          else if (field === "spicy_level") d.spicy_level = el.value === "" ? null : Number(el.value);
-          else if (field === "is_vegetarian") d.is_vegetarian = el.value === "" ? null : el.value === "true";
-          else if (field === "is_signature") d.is_signature = el.checked;
-          // 用户改过 → 视为已确认
-          d.vendor_confirmed = true;
-          d.confidence = 1;
-          d.source = d.source || "vendor_input";
-        });
-      });
-      wrap.querySelectorAll("[data-del]").forEach((el) => {
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          dishes.splice(Number(el.dataset.del), 1);
-          renderDishTable();
-        });
-      });
-    }
-
-    $("#addRowBtn").addEventListener("click", () => {
-      dishes.push({ id: "dish_" + Math.random().toString(36).slice(2, 10), name: "", price: null, category: null, spicy_level: null, is_vegetarian: null, is_signature: false, confidence: 1, source: "vendor_input", vendor_confirmed: true });
-      renderDishTable();
-      $("#step3").classList.remove("hidden");
-    });
-
-    // ---- 营业时间编辑器 ----
-    function buildHoursEditor() {
-      const wrap = $("#hoursEditor");
-      wrap.innerHTML = "";
-      const weekdays = $("#sameEveryday").checked ? [0] : [0, 1, 2, 3, 4, 5, 6];
-      for (const wd of weekdays) {
-        const label = $("#sameEveryday").checked ? "每天" : WEEKDAY_CN[wd];
-        wrap.insertAdjacentHTML("beforeend",
-          '<div class="hours-row"><label>' + label + '</label>'
-          + '<input type="time" data-wd="' + wd + '" data-field="open">'
-          + '<span>–</span>'
-          + '<input type="time" data-wd="' + wd + '" data-field="close">'
-          + "</div>");
-      }
-    }
-    $("#sameEveryday").addEventListener("change", buildHoursEditor);
-    buildHoursEditor();
-
-    function collectHours() {
-      const rows = $("#hoursEditor").querySelectorAll(".hours-row");
-      const entries = [];
-      for (const r of rows) {
-        const wd = Number(r.querySelector("[data-field=open]").dataset.wd);
-        const open = r.querySelector("[data-field=open]").value;
-        const close = r.querySelector("[data-field=close]").value;
-        if (!open || !close) continue;
-        if ($("#sameEveryday").checked) {
-          for (let d = 0; d < 7; d++) entries.push({ weekday: d, open, close });
-          break;
-        } else {
-          entries.push({ weekday: wd, open, close });
-        }
-      }
-      return entries;
-    }
-
-    // ---- 发布 ----
     $("#publishBtn").addEventListener("click", async () => {
-      const name = $("#shopName").value.trim();
-      if (!name) { $("#publishError").textContent = "请填写店名"; $("#publishError").style.display = "block"; return; }
-
-      // 检查是否有未确认行（confidence < 0.8 且未被修改）
-      const unconfirmed = dishes.filter((d) => (d.confidence != null && d.confidence < 0.8) && !d.vendor_confirmed);
-      if (unconfirmed.length) {
-        $("#publishError").textContent = "还有 " + unconfirmed.length + " 道菜标记「请确认」，请核实或删除后再发布。";
-        $("#publishError").style.display = "block";
-        $("#step2").scrollIntoView();
-        return;
-      }
-
-      // 过滤掉空菜名
-      const validDishes = dishes.filter((d) => d.name && d.name.trim());
-      if (!validDishes.length) { $("#publishError").textContent = "至少需要一道菜品"; $("#publishError").style.display = "block"; return; }
-
-      const shop = {
-        name,
-        cuisine: $("#cuisine").value.split(/[、,，\s]+/).filter(Boolean),
-        area: $("#area").value || null,
-        address: $("#address").value.trim() || null,
-        avg_price: $("#avgPrice").value === "" ? null : Number($("#avgPrice").value),
-        opening_hours: collectHours(),
-        services: $("#services").value.split(/[、,，\s]+/).filter(Boolean),
-        description: $("#description").value.trim() || null,
-        contact: $("#contact").value.trim() || null,
-      };
-      const dishPayload = validDishes.map((d) => ({
-        id: d.id,
-        name: d.name,
-        price: d.price,
-        category: d.category,
-        spicy_level: d.spicy_level,
-        is_vegetarian: d.is_vegetarian,
-        is_signature: d.is_signature === true,
-        confidence: d.confidence,
-        source: d.source,
-        vendor_confirmed: true,
-      }));
-
+      const err = $("#newErr");
+      const fail = (m) => { err.textContent = m; show(err); };
+      show(err, false);
+      const info = newInfo.get();
+      if (!info.name) return fail("请填写店名");
+      if (newDishes.unconfirmed()) return fail("还有 " + newDishes.unconfirmed() + " 道菜标记「请确认」，请核对后再发布。");
+      const dishes = newDishes.get();
+      if (!dishes.length) return fail("至少需要一道菜品");
       $("#publishBtn").disabled = true;
-      $("#publishBtn").textContent = "发布中…";
       try {
-        const shopId = await App.publishShop(passcode, shop, dishPayload);
-        const totalSeconds = (Date.now() - startTime) / 1000;
-
-        // 写 extraction_logs
-        const vendorEditedRows = dishes.filter((d) => d.vendor_confirmed).length;
-        App.logExtraction({
-          shopId,
-          model: App.cfg.model,
-          promptVersion: window._extractionLog?.promptVersion ?? null,
-          raw: window._extractionLog?.raw ?? null,
-          timings: window._extractionLog?.timings ?? null,
-          attempts: window._extractionLog?.attempts ?? null,
-          firstTryOk: window._extractionLog?.firstTryOk ?? null,
-          vendorEditedRows,
-          totalSeconds,
-        }).catch(() => {});
-
-        $("#publishError").style.display = "none";
-        $("#publishResult").innerHTML = '<div class="success">发布成功！</div>'
-          + '<div style="margin-top:10px"><a href="/shop.html?id=' + encodeURIComponent(shopId) + '">查看店铺主页 →</a></div>';
+        const r = await api.createShop(joinPass, info, dishes);
+        api.logExtraction({
+          shopId: r.shopId, model: window.APP_CONFIG && window.APP_CONFIG.model,
+          promptVersion: exLog && exLog.promptVersion, raw: exLog && exLog.raw, timings: exLog && exLog.timings,
+          attempts: exLog && exLog.attempts, firstTryOk: exLog && exLog.firstTryOk,
+          vendorEditedRows: newDishes.editedCount(), totalSeconds: (Date.now() - t0) / 1000,
+        });
+        $("#newCode").textContent = r.manageCode || "（后端未返回管理码）";
+        $("#toDash").onclick = () => r.manageCode ? enter(r.manageCode) : go("vEntry");
+        go("vCode");
       } catch (e) {
         console.error(e);
-        $("#publishError").textContent = "发布失败：" + (e.message || String(e));
-        $("#publishError").style.display = "block";
+        fail("发布失败：" + (e.message || String(e)));
       } finally {
         $("#publishBtn").disabled = false;
-        $("#publishBtn").textContent = "发布店铺主页";
       }
     });
 
-    // 识别完成后或手动添加时，逐步显示步骤
-    $("#step2").addEventListener("click", () => {});
-    // 菜品表格有内容就显示基本信息
-    const obs = new MutationObserver(() => { $("#step3").classList.remove("hidden"); });
-    obs.observe($("#dishTableWrap"), { childList: true, subtree: true });
+    // ================= 我的店铺 =================
+    const editInfo = createInfoForm($("#editInfo"));
+    const editDishes = createDishEditor($("#editDishes"));
+    createPhotoRecognizer($("#editPhoto"), (dishes) => editDishes.append(dishes));
 
-    // 若已通过口令（会话内），直接进入
-    if (sessionStorage.getItem("merchant_authed") === "1") {
-      $("#passBox").classList.add("hidden");
-      $("#main").classList.remove("hidden");
-      // 注意：passcode 需要重新输入，因为 sessionStorage 不存口令明文
+    async function reload() {
+      const r = await api.openMyShop(code);
+      if (r) mine = r;
     }
+
+    function renderHeader() {
+      const s = mine.shop;
+      $("#dName").textContent = s.name;
+      $("#dMeta").textContent = [s.area || "区域未填", mine.dishes.length + " 道菜", s.updated_by_merchant_at ? "更新于 " + new Date(s.updated_by_merchant_at).toLocaleString("zh-CN", { hour12: false }) : ""].filter(Boolean).join(" · ");
+      $("#dPreview").href = "/shop.html?id=" + encodeURIComponent(s.id);
+    }
+
+    function renderDash() {
+      renderHeader();
+      editInfo.set(mine.shop);
+      editDishes.set(mine.dishes);
+      renderPromos();
+      selectTab("stats");
+    }
+
+    function selectTab(t) {
+      document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+      document.querySelectorAll("[data-panel]").forEach((p) => show(p, p.dataset.panel === t));
+      if (t === "stats") loadStats();
+    }
+    document.querySelectorAll(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => selectTab(b.dataset.tab)));
+
+    $("#dLogout").addEventListener("click", () => { code = ""; mine = null; $("#codeInput").value = ""; go("vEntry"); });
+
+    // ---------- 数据反馈 ----------
+    document.querySelectorAll("[data-days]").forEach((b) => b.addEventListener("click", () => {
+      days = Number(b.dataset.days);
+      document.querySelectorAll("[data-days]").forEach((x) => x.classList.toggle("primary", x === b));
+      loadStats();
+    }));
+
+    const SRC = { list: "首页列表", filter: "筛选结果", ai: "AI 推荐", direct: "直接打开" };
+    function barlist(items, labelFn = (x) => x.key) {
+      if (!items || !items.length) return '<div class="empty">暂无数据</div>';
+      const max = Math.max(...items.map((x) => x.count));
+      return '<ul class="barlist">' + items.map((x) =>
+        "<li><span>" + esc(labelFn(x)) + '</span><span class="n">' + x.count + '</span><span class="bar"><i style="width:' + (100 * x.count / max).toFixed(1) + '%"></i></span></li>').join("") + "</ul>";
+    }
+
+    async function loadStats() {
+      const box = $("#statsBox");
+      box.innerHTML = '<div class="card loading">加载中…</div>';
+      try {
+        const st = await api.getShopStats(code, days);
+        const pct = (v) => v == null ? "—" : Math.round(v * 100) + "%";
+        box.innerHTML =
+          '<div class="stats">'
+          + '<div class="stat"><div class="v">' + st.impressions + '</div><div class="k">人次看到你的店</div></div>'
+          + '<div class="stat"><div class="v">' + st.clicks + '</div><div class="k">人次点开主页</div></div>'
+          + '<div class="stat"><div class="v">' + pct(st.ctr) + '</div><div class="k">点开率</div></div>'
+          + '<div class="stat"><div class="v">' + st.aiRecommended + '</div><div class="k">次被 AI 推荐</div></div>'
+          + "</div>"
+          + '<div class="grid2">'
+          + '<div class="card"><div class="section-title" style="margin-top:0">学生从哪里看到你</div>' + barlist(st.sources, (x) => SRC[x.key] || x.key) + "</div>"
+          + '<div class="card"><div class="section-title" style="margin-top:0">看到你的学生在筛选什么</div>' + barlist(st.topFilters) + "</div>"
+          + "</div>"
+          + '<div class="card"><div class="section-title" style="margin-top:0">附近没被满足的需求</div>'
+          + '<div class="hint" style="margin-top:0;margin-bottom:6px">学生在' + esc(mine.shop.area || "全站") + '这样筛选或提问，但没有找到任何店。如果你有符合的菜，标记好就能出现在结果里。</div>'
+          + barlist(st.unmetDemand, (x) => x.label + "（" + x.via + "）") + "</div>"
+          + '<div class="note">统计匿名进行，"人次"按每个浏览器每天去重。不包含学生个人信息。</div>';
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = '<div class="card error">数据加载失败：' + esc(e.message || String(e)) + "</div>";
+      }
+    }
+
+    // ---------- 店铺信息 ----------
+    $("#saveInfo").addEventListener("click", async () => {
+      show($("#infoErr"), false); show($("#infoOk"), false);
+      const f = editInfo.get();
+      if (!f.name) { $("#infoErr").textContent = "店名不能为空"; show($("#infoErr")); return; }
+      $("#saveInfo").disabled = true;
+      try {
+        await api.updateShop(code, f);
+        await reload(); renderHeader();
+        show($("#infoOk"));
+      } catch (e) {
+        $("#infoErr").textContent = "保存失败：" + (e.message || String(e)); show($("#infoErr"));
+      } finally { $("#saveInfo").disabled = false; }
+    });
+
+    // ---------- 菜单 ----------
+    $("#saveMenu").addEventListener("click", async () => {
+      show($("#menuErr"), false); show($("#menuOk"), false);
+      if (editDishes.unconfirmed()) { $("#menuErr").textContent = "还有 " + editDishes.unconfirmed() + " 道菜标记「请确认」，请核对后再保存。"; show($("#menuErr")); return; }
+      $("#saveMenu").disabled = true;
+      try {
+        await api.replaceDishes(code, editDishes.get());
+        await reload(); renderHeader(); editDishes.set(mine.dishes); renderPromos();
+        show($("#menuOk"));
+      } catch (e) {
+        $("#menuErr").textContent = "保存失败：" + (e.message || String(e)); show($("#menuErr"));
+      } finally { $("#saveMenu").disabled = false; }
+    });
+
+    // ---------- 优惠 ----------
+    let editingPromo = null;
+    const VALUE_LABEL = { percent_off: "优惠百分比（8折填 20）", amount_off: "减多少元", special_price: "特价（元）", gift: "数值", other: "数值" };
+
+    function renderPromos() {
+      const nowISO = new Date().toISOString();
+      const list = mine.promotions || [];
+      $("#promoList").innerHTML = list.length ? list.map((p) => {
+        const live = isPromoActive(p, nowISO);
+        const status = !p.active ? '<span class="badge unknown" style="margin-left:0">已下架</span>' : live ? '<span class="badge open" style="margin-left:0">展示中</span>' : '<span class="badge unknown" style="margin-left:0">不在有效期</span>';
+        return '<div style="padding:10px 0;border-top:1px solid var(--border)">'
+          + "<div>" + status + " <strong>" + esc(p.title) + '</strong> <span class="meta">' + esc([PROMO_KINDS[p.kind], promoValueText(p)].filter(Boolean).join(" ")) + "</span></div>"
+          + (promoWhen(p) ? '<div class="meta">' + esc(promoWhen(p)) + "</div>" : "")
+          + '<div class="row-actions" style="margin-top:6px"><button class="btn-sm" data-edit="' + esc(p.id) + '">编辑</button>'
+          + '<button class="btn-sm" data-toggle="' + esc(p.id) + '">' + (p.active ? "下架" : "上架") + "</button></div></div>";
+      }).join("") : '<div class="empty">还没有优惠。微信群里发的福利、折扣，可以在这里长期展示给学生。</div>';
+      $("#promoList").querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openPromoForm(list.find((p) => p.id === b.dataset.edit))));
+      $("#promoList").querySelectorAll("[data-toggle]").forEach((b) => b.addEventListener("click", async () => {
+        const p = list.find((x) => x.id === b.dataset.toggle);
+        try { await api.setPromotionActive(code, p.id, !p.active); await reload(); renderPromos(); }
+        catch (e) { alert("操作失败：" + (e.message || e)); }
+      }));
+    }
+
+    function openPromoForm(p) {
+      editingPromo = p || null;
+      const v = p || { kind: "percent_off", dish_ids: [], weekdays: [], active: true };
+      $("#promoFormTitle").textContent = p ? "编辑优惠" : "新建优惠";
+      $("#pTitle").value = v.title || "";
+      $("#pKind").value = v.kind || "other";
+      $("#pValue").value = v.value ?? "";
+      $("#pMin").value = v.min_spend ?? "";
+      $("#pStartT").value = v.start_time || ""; $("#pEndT").value = v.end_time || "";
+      $("#pStartD").value = v.start_date || ""; $("#pEndD").value = v.end_date || "";
+      $("#pNote").value = v.note || "";
+      $("#pActive").checked = v.active !== false;
+      $("#pDishes").innerHTML = mine.dishes.length ? mine.dishes.map((d) =>
+        '<label class="chk"><input type="checkbox" value="' + esc(d.id) + '"' + ((v.dish_ids || []).includes(d.id) ? " checked" : "") + "> " + esc(d.name) + "</label>").join("") : '<div class="empty">菜单为空</div>';
+      $("#pWeekdays").innerHTML = WEEKDAY_CN.map((w, i) =>
+        '<label class="chk"><input type="checkbox" value="' + i + '"' + ((v.weekdays || []).includes(i) ? " checked" : "") + "> " + w + "</label>").join("");
+      $("#pValueLbl").textContent = VALUE_LABEL[$("#pKind").value];
+      show($("#promoErr"), false);
+      show($("#promoForm"));
+      $("#promoForm").scrollIntoView({ behavior: "smooth" });
+    }
+    $("#pKind").addEventListener("change", () => { $("#pValueLbl").textContent = VALUE_LABEL[$("#pKind").value]; });
+    $("#promoNew").addEventListener("click", () => openPromoForm(null));
+    $("#promoCancel").addEventListener("click", () => show($("#promoForm"), false));
+    $("#promoSave").addEventListener("click", async () => {
+      const num = (el) => el.value === "" ? null : Number(el.value);
+      const p = {
+        id: editingPromo ? editingPromo.id : undefined,
+        title: $("#pTitle").value.trim(),
+        kind: $("#pKind").value,
+        value: num($("#pValue")),
+        min_spend: num($("#pMin")),
+        dish_ids: [...$("#pDishes").querySelectorAll("input:checked")].map((x) => x.value),
+        weekdays: [...$("#pWeekdays").querySelectorAll("input:checked")].map((x) => Number(x.value)),
+        start_time: $("#pStartT").value || null, end_time: $("#pEndT").value || null,
+        start_date: $("#pStartD").value || null, end_date: $("#pEndD").value || null,
+        note: $("#pNote").value.trim() || null,
+        active: $("#pActive").checked,
+      };
+      if (!p.title) { $("#promoErr").textContent = "请填写优惠标题"; show($("#promoErr")); return; }
+      if (p.start_date && p.end_date && p.end_date < p.start_date) { $("#promoErr").textContent = "结束日期早于开始日期"; show($("#promoErr")); return; }
+      try {
+        await api.savePromotion(code, p);
+        await reload(); renderPromos();
+        show($("#promoForm"), false);
+      } catch (e) {
+        $("#promoErr").textContent = "保存失败：" + (e.message || String(e)); show($("#promoErr"));
+      }
+    });
   </script>
 </body>
 </html>

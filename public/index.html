@@ -46,7 +46,7 @@
   </style>
 </head>
 <body>
-  <div class="topbar">🍜 找店助手 <span class="sub">学生找店 · 免登录</span></div>
+  <header id="topbar"></header>
 
   <div class="container">
     <!-- 上方：AI 提问 -->
@@ -71,6 +71,7 @@
       <button class="chip" data-f="budget30" aria-pressed="false">30元内</button>
       <button class="chip" data-f="nospicy" aria-pressed="false">不辣</button>
       <button class="chip" data-f="veg" aria-pressed="false">素食</button>
+      <button class="chip" data-f="promo" aria-pressed="false">有优惠</button>
       <button class="chip" data-area="北门" aria-pressed="false">北门</button>
       <button class="chip" data-area="南门" aria-pressed="false">南门</button>
       <button class="chip" data-area="东门" aria-pressed="false">东门</button>
@@ -82,6 +83,7 @@
       <span class="count" id="listCount"></span>
     </div>
     <div id="shopList"><div class="card loading">加载中…</div></div>
+    <div class="footer-note">本站匿名统计浏览和筛选次数，用于帮助商家了解需求，不收集任何个人信息。</div>
   </div>
 
   <!-- 依赖：SDK + config + app.js（数据服务），页面只通过 js/api.js 读取数据 -->
@@ -90,12 +92,16 @@
   <script src="/app.js"></script>
   <script type="module">
     import * as core from "./core.mjs";
-    import { getVerifiedShopsAndDishes, findShops, DEMO_MODE } from "./js/api.js";
+    import { getVerifiedShopsAndDishes, findShops, logEvent, DEMO_MODE } from "./js/api.js";
+    import { renderNav } from "./js/nav.js";
+    import { isPromoActive } from "./js/util.js";
+    renderNav("student", "学生找店 · 免登录");
 
     const $ = (s) => document.querySelector(s);
     const MAX_Q = (window.APP_CONFIG && window.APP_CONFIG.maxQuestionsPerSession) || 20;
 
-    let shops = [], dishes = [], shopsById = {}, dishesById = {};
+    let shops = [], dishes = [], promotions = [], shopsById = {}, dishesById = {};
+    const activePromos = (shopId, nowISO) => promotions.filter((p) => p.shop_id === shopId && isPromoActive(p, nowISO));
 
     function esc(s) {
       return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -108,7 +114,7 @@
     }
 
     // 一张店铺卡片。c 为 core.search / runFindPipeline 返回的候选；dishLabel 为菜品行标签
-    function shopCard(c, nowISO, dishLabel) {
+    function shopCard(c, nowISO, dishLabel, source) {
       const s = shopsById[c.shopId] || { name: c.shopName };
       const st = core.isOpen(s, nowISO);
       let ds = c.matchedDishes || [];
@@ -125,17 +131,20 @@
         : "";
       const avg = s.avg_price != null ? "人均 ¥" + esc(s.avg_price) : "人均未提供";
       const area = s.area ? esc(s.area) : "区域未提供";
-      return '<a class="shop-card" href="/shop.html?id=' + encodeURIComponent(c.shopId) + '">'
+      const promos = activePromos(c.shopId, nowISO);
+      const promoHtml = promos.length ? '<div class="promo-line">🏷 ' + promos.map((p) => esc(p.title)).join("；") + "</div>" : "";
+      return '<a class="shop-card" data-shop="' + esc(c.shopId) + '" data-src="' + source + '" href="/shop.html?id=' + encodeURIComponent(c.shopId) + "&from=" + source + '">'
         + '<div class="top"><div class="name">' + esc(s.name)
         + (s.is_demo ? '<span class="badge demo">演示数据</span>' : "") + "</div>"
         + openBadge(st) + "</div>"
         + '<div class="meta">' + avg + " · " + area + "</div>"
         + dishHtml
+        + promoHtml
         + "</a>";
     }
 
     // ---------------- 筛选 ----------------
-    const state = { open: false, budget30: false, nospicy: false, veg: false, areas: new Set() };
+    const state = { open: false, budget30: false, nospicy: false, veg: false, promo: false, areas: new Set() };
 
     function currentFilters(area) {
       return {
@@ -158,7 +167,10 @@
         for (const c of r.candidates) if (!seen.has(c.shopId)) seen.set(c.shopId, c);
         for (const id of r.unknownHoursShopIds) unknown.add(id);
       }
-      const list = [...seen.values()].map((c) => ({ c, open: core.isOpen(shopsById[c.shopId] || {}, nowISO) }));
+      let list = [...seen.values()];
+      // "有优惠"不是 core 的筛选条件，在 core.search 结果上再过滤
+      if (state.promo) list = list.filter((c) => activePromos(c.shopId, nowISO).length > 0);
+      list = list.map((c) => ({ c, open: core.isOpen(shopsById[c.shopId] || {}, nowISO) }));
       // 显示全部符合条件的店：营业中优先，再按匹配菜品多、最低价低、店名
       list.sort((x, y) =>
         (y.open === true) - (x.open === true) ||
@@ -167,7 +179,8 @@
         String(x.c.shopName).localeCompare(String(y.c.shopName), "zh"));
 
       const dishFilter = state.budget30 || state.nospicy || state.veg;
-      const anyFilter = dishFilter || state.open || state.areas.size > 0;
+      const anyFilter = dishFilter || state.open || state.promo || state.areas.size > 0;
+      const source = anyFilter ? "filter" : "list";
       $("#listCount").innerHTML = anyFilter
         ? "符合条件 " + list.length + ' 家 · <button class="linkbtn" id="clearF">清除筛选</button>'
         : "共 " + list.length + " 家";
@@ -175,15 +188,27 @@
       if (clear) clear.addEventListener("click", clearFilters);
 
       let html = list.length
-        ? list.map((x) => shopCard(x.c, nowISO, dishFilter ? "匹配菜品" : null)).join("")
+        ? list.map((x) => shopCard(x.c, nowISO, dishFilter ? "匹配菜品" : null, source)).join("")
         : '<div class="card" style="color:var(--muted);font-size:14px">没有同时符合这些条件的店，试试少选几个。</div>';
       const unknownNames = [...unknown].filter((id) => !seen.has(id)).map((id) => shopsById[id] && shopsById[id].name).filter(Boolean);
       if (unknownNames.length) html += '<div class="note-box">另有 ' + unknownNames.map(esc).join("、") + " 营业时间未提供，无法判断现在是否营业。</div>";
       $("#shopList").innerHTML = html;
+      const ef = eventFilters();
+      logEvent(list.map((x) => ({ event: "impression", shopId: x.c.shopId, source, filters: anyFilter ? ef : null })));
+      return list.length;
+    }
+
+    // 记录到 shop_events 的筛选条件（区域可多选，所以用 areas 数组）
+    function eventFilters() {
+      return {
+        open_at: state.open ? "now" : null, budget: state.budget30 ? 30 : null,
+        spicy: state.nospicy ? "no_spicy" : null, vegetarian: state.veg ? true : null,
+        promo: state.promo || null, areas: [...state.areas],
+      };
     }
 
     function clearFilters() {
-      state.open = state.budget30 = state.nospicy = state.veg = false;
+      state.open = state.budget30 = state.nospicy = state.veg = state.promo = false;
       state.areas.clear();
       document.querySelectorAll("#filters .chip").forEach((b) => b.setAttribute("aria-pressed", "false"));
       renderList();
@@ -196,7 +221,10 @@
         b.setAttribute("aria-pressed", String(on));
         if (b.dataset.area) on ? state.areas.add(b.dataset.area) : state.areas.delete(b.dataset.area);
         else state[b.dataset.f] = on;
-        if (loaded) renderList();
+        if (loaded) {
+          const n = renderList();
+          logEvent({ event: "filter_used", filters: eventFilters(), resultCount: n });
+        }
       });
     });
 
@@ -239,7 +267,8 @@
       let html = '<div class="card"><div class="ai-head"><span class="title">「' + esc(q) + '」</span>'
         + '<button class="linkbtn" id="closeAI">收起</button></div>'
         + '<div class="answer">' + esc(r.answer || "") + "</div></div>";
-      for (const c of r.candidates || []) html += shopCard(c, nowISO, "匹配菜品");
+      for (const c of r.candidates || []) html += shopCard(c, nowISO, "匹配菜品", "ai");
+      logEvent((r.candidates || []).map((c) => ({ event: "impression", shopId: c.shopId, source: "ai", filters: r.filters })));
       if (r.filters) {
         html += '<details style="margin:2px 4px 14px"><summary>系统理解的条件</summary>'
           + '<pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;color:var(--muted)">'
@@ -257,7 +286,7 @@
     // ---------------- 初始加载 ----------------
     async function init() {
       try {
-        ({ shops, dishes } = await getVerifiedShopsAndDishes());
+        ({ shops, dishes, promotions } = await getVerifiedShopsAndDishes());
         shopsById = Object.fromEntries(shops.map((s) => [s.id, s]));
         dishesById = Object.fromEntries(dishes.map((d) => [d.id, d]));
         loaded = true;
@@ -267,6 +296,11 @@
         $("#shopList").innerHTML = '<div class="card error">店铺加载失败：' + esc(e.message || String(e)) + "</div>";
       }
     }
+    // 点开卡片（列表、筛选结果、AI 结果都走这里）
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("a.shop-card[data-shop]");
+      if (a) logEvent({ event: "card_click", shopId: a.dataset.shop, source: a.dataset.src });
+    });
     init();
   </script>
 </body>
