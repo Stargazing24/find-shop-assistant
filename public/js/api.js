@@ -136,7 +136,8 @@ function visitId() {
   try {
     const v = JSON.parse(localStorage.getItem("fsa_visit") || "null");
     if (v && v.day === today) return v.id;
-    const id = Math.random().toString(36).slice(2, 12);
+    // 16 位十六进制，满足数据库 visit_id 长度 8–64 的约束
+    const id = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, "0")).join("");
     localStorage.setItem("fsa_visit", JSON.stringify({ day: today, id }));
     return id;
   } catch { return null; }

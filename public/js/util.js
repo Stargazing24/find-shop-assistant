@@ -54,7 +54,8 @@ export function promoValueText(p) {
 export function promoWhen(p) {
   const parts = [];
   if (Array.isArray(p.weekdays) && p.weekdays.length && p.weekdays.length < 7) parts.push(p.weekdays.map((w) => WEEKDAY_CN[w]).join("、"));
-  if (p.start_time && p.end_time) parts.push(p.start_time + "–" + p.end_time);
+  // 数据库 time 类型返回 "11:00:00"，只显示到分钟
+  if (p.start_time && p.end_time) parts.push(String(p.start_time).slice(0, 5) + "–" + String(p.end_time).slice(0, 5));
   if (p.end_date) parts.push("至 " + p.end_date);
   return parts.join(" · ");
 }

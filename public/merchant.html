@@ -118,7 +118,7 @@
         <div class="card hidden" id="promoForm">
           <div class="section-title" style="margin-top:0" id="promoFormTitle">新建优惠</div>
           <label>标题 <span style="color:var(--red)">*</span></label>
-          <input type="text" id="pTitle" placeholder="如：午市套餐 8 折、满 30 减 5、第二份半价">
+          <input type="text" id="pTitle" maxlength="80" placeholder="如：午市套餐 8 折、满 30 减 5、第二份半价">
           <div class="inline-fields">
             <div><label>类型</label><select id="pKind">
               <option value="percent_off">折扣</option><option value="amount_off">满减</option>
@@ -371,7 +371,7 @@
       $("#pKind").value = v.kind || "other";
       $("#pValue").value = v.value ?? "";
       $("#pMin").value = v.min_spend ?? "";
-      $("#pStartT").value = v.start_time || ""; $("#pEndT").value = v.end_time || "";
+      $("#pStartT").value = (v.start_time || "").slice(0, 5); $("#pEndT").value = (v.end_time || "").slice(0, 5);
       $("#pStartD").value = v.start_date || ""; $("#pEndD").value = v.end_date || "";
       $("#pNote").value = v.note || "";
       $("#pActive").checked = v.active !== false;
