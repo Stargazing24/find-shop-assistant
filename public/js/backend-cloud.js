@@ -16,6 +16,40 @@ async function rpc(name, params) {
   return data;
 }
 
+// 数据库里没有这个函数（PostgREST PGRST202）
+function isMissingFunction(error) {
+  return /PGRST202/.test(String(error.code || "")) || /Could not find the function/i.test(String(error.message || ""));
+}
+
+// publish_shop 是 v0.4 的函数，只传它原本认识的字段（notice 等 v0.5 字段不传）
+function legacyShop(s) {
+  return {
+    name: s.name,
+    cuisine: s.cuisine || [],
+    area: s.area ?? null,
+    address: s.address ?? null,
+    avg_price: s.avg_price ?? null,
+    opening_hours: s.opening_hours ?? null,
+    services: s.services || [],
+    description: s.description ?? null,
+    contact: s.contact ?? null,
+  };
+}
+function legacyDishes(list) {
+  return (list || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    price: d.price ?? null,
+    category: d.category ?? null,
+    spicy_level: d.spicy_level ?? null,
+    is_vegetarian: d.is_vegetarian ?? null,
+    is_signature: d.is_signature === true,
+    confidence: d.confidence ?? null,
+    source: d.source ?? null,
+    vendor_confirmed: true,
+  }));
+}
+
 export const cloud = {
   mode: "cloud",
 
@@ -47,7 +81,17 @@ export const cloud = {
 
   // ---------- 商家 ----------
   async createShop(joinPasscode, shop, dishes) {
-    return rpc("create_shop", { p_join_passcode: joinPasscode, p_shop: shop, p_dishes: dishes }); // → {shop_id, manage_code}
+    const { data, error } = await App().cloud.database.rpc("create_shop", { p_join_passcode: joinPasscode, p_shop: shop, p_dishes: dishes });
+    if (!error) return data; // → {shop_id, manage_code}
+    if (!isMissingFunction(error)) throw new Error(`云端接口 create_shop 调用失败：${error.message || error}`);
+    // 临时方案：create_shop（数据库第 2 批）还没建好时，改用 WorkBuddy 已有的 publish_shop。
+    // 口令用商家入驻口令，在数据库内校验。没有管理码，发布后不能修改；第 2 批建好后自动走上面的 create_shop。
+    const r = await App().cloud.database.rpc("publish_shop", { p_passcode: joinPasscode, p_shop: legacyShop(shop), p_dishes: legacyDishes(dishes) });
+    if (r.error) {
+      if (/invalid passcode/i.test(String(r.error.message || ""))) throw new Error("入驻口令不正确");
+      throw new Error(`云端接口 publish_shop 调用失败：${r.error.message || r.error}`);
+    }
+    return { shop_id: r.data, manage_code: null, legacy: true };
   },
   async openMyShop(code) {
     return rpc("open_my_shop", { p_code: code }); // → {shop, dishes, promotions} | null

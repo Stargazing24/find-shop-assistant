@@ -56,9 +56,15 @@
     <section id="vCode" class="hidden">
       <div class="card">
         <div class="success" style="font-size:16px;margin-top:0">发布成功！</div>
-        <div style="margin-top:8px">这是你的<strong>店铺管理码</strong>，以后修改菜单、营业时间、优惠都要用它：</div>
-        <div class="code-box" id="newCode"></div>
-        <div class="error" style="margin-top:0">只显示这一次，请立即截图或抄下来。丢失后需要联系平台管理员重置。</div>
+        <div id="codeHas">
+          <div style="margin-top:8px">这是你的<strong>店铺管理码</strong>，以后修改菜单、营业时间、优惠都要用它：</div>
+          <div class="code-box" id="newCode"></div>
+          <div class="error" style="margin-top:0">只显示这一次，请立即截图或抄下来。丢失后需要联系平台管理员重置。</div>
+        </div>
+        <div id="codeNone" class="hidden">
+          <div style="margin-top:8px">店铺和菜单已保存到系统（店铺编号 <span id="newShopId"></span>）。</div>
+          <div class="muted" style="margin-top:6px">当前是过渡版本：暂时没有店铺管理码，发布后不能自己修改，请勿重复提交。需要修改请联系平台管理员。如果学生端暂时看不到，说明还需平台核实。</div>
+        </div>
         <button class="btn" id="toDash" style="margin-top:12px">进入我的店铺</button>
       </div>
     </section>
@@ -223,7 +229,11 @@
           attempts: exLog && exLog.attempts, firstTryOk: exLog && exLog.firstTryOk,
           vendorEditedRows: newDishes.editedCount(), totalSeconds: (Date.now() - t0) / 1000,
         });
-        $("#newCode").textContent = r.manageCode || "（后端未返回管理码）";
+        $("#newCode").textContent = r.manageCode || "";
+        $("#newShopId").textContent = r.shopId || "";
+        show($("#codeHas"), !!r.manageCode);
+        show($("#codeNone"), !r.manageCode);
+        $("#toDash").textContent = r.manageCode ? "进入我的店铺" : "返回";
         $("#toDash").onclick = () => r.manageCode ? enter(r.manageCode) : go("vEntry");
         go("vCode");
       } catch (e) {
