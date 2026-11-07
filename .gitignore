@@ -7,3 +7,6 @@ node_modules/
 # 运行时
 *.log
 .DS_Store
+
+# 分享用的打包文件
+*.zip
