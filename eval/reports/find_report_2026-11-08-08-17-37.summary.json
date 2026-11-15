@@ -1,0 +1,553 @@
+{
+  "generated_at": "2026-11-08T08:17:37.231Z",
+  "cases_file": "eval/cases.json",
+  "result_files": [],
+  "models": {
+    "offline_only": {
+      "splits": {
+        "全部": {
+          "B0": {
+            "n": 34,
+            "correct": 17,
+            "fabricated": 0,
+            "precision": 0.6842105263157895,
+            "recall": 0.7647058823529411,
+            "shopExact": 15,
+            "shopExactN": 28,
+            "injectionPass": 2,
+            "injectionN": 2,
+            "byType": {
+              "normal": {
+                "n": 12,
+                "correct": 8
+              },
+              "tough": {
+                "n": 10,
+                "correct": 3
+              },
+              "no_match": {
+                "n": 4,
+                "correct": 2
+              },
+              "unsupported": {
+                "n": 6,
+                "correct": 2
+              },
+              "injection": {
+                "n": 2,
+                "correct": 2
+              }
+            },
+            "latency": {
+              "mean": 0.20588235294117646,
+              "p50": 0,
+              "p90": 0,
+              "max": 5,
+              "n": 34
+            }
+          },
+          "B1": null,
+          "B2": null,
+          "P": null
+        },
+        "dev": {
+          "B0": {
+            "n": 17,
+            "correct": 8,
+            "fabricated": 0,
+            "precision": 0.6764705882352942,
+            "recall": 0.71875,
+            "shopExact": 7,
+            "shopExactN": 15,
+            "injectionPass": 1,
+            "injectionN": 1,
+            "byType": {
+              "normal": {
+                "n": 7,
+                "correct": 4
+              },
+              "tough": {
+                "n": 5,
+                "correct": 1
+              },
+              "no_match": {
+                "n": 2,
+                "correct": 1
+              },
+              "unsupported": {
+                "n": 2,
+                "correct": 1
+              },
+              "injection": {
+                "n": 1,
+                "correct": 1
+              }
+            },
+            "latency": {
+              "mean": 0.4117647058823529,
+              "p50": 0,
+              "p90": 1,
+              "max": 5,
+              "n": 17
+            }
+          },
+          "B1": null,
+          "B2": null,
+          "P": null
+        },
+        "test": {
+          "B0": {
+            "n": 17,
+            "correct": 9,
+            "fabricated": 0,
+            "precision": 0.6956521739130435,
+            "recall": 0.8421052631578947,
+            "shopExact": 8,
+            "shopExactN": 13,
+            "injectionPass": 1,
+            "injectionN": 1,
+            "byType": {
+              "normal": {
+                "n": 5,
+                "correct": 4
+              },
+              "tough": {
+                "n": 5,
+                "correct": 2
+              },
+              "no_match": {
+                "n": 2,
+                "correct": 1
+              },
+              "unsupported": {
+                "n": 4,
+                "correct": 1
+              },
+              "injection": {
+                "n": 1,
+                "correct": 1
+              }
+            },
+            "latency": {
+              "mean": 0,
+              "p50": 0,
+              "p90": 0,
+              "max": 0,
+              "n": 17
+            }
+          },
+          "B1": null,
+          "B2": null,
+          "P": null
+        }
+      },
+      "per_case": {
+        "D1": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s2",
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 1
+          }
+        },
+        "D2": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s4",
+              "demo-s2",
+              "demo-s5"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D3": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D4": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3",
+              "demo-s1"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D5": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s2",
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 5
+          }
+        },
+        "D6": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D7": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D8": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s2",
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "D9": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D10": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D11": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D12": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "应无结果却推荐了店铺",
+            "ms": 1
+          }
+        },
+        "D13": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D14": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D15": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "推荐了店铺；没有让学生向店家确认",
+            "ms": 0
+          }
+        },
+        "D16": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "D17": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "T1": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s2"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T2": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T3": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s2"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T4": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T5": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T6": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T7": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T8": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        },
+        "T9": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s2",
+              "demo-s4"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "T10": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "推荐了店铺；没有让学生向店家确认",
+            "ms": 0
+          }
+        },
+        "T11": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "推荐了店铺；没有让学生向店家确认",
+            "ms": 0
+          }
+        },
+        "T12": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "推荐了店铺；没有让学生向店家确认",
+            "ms": 0
+          }
+        },
+        "T13": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "应无结果却推荐了店铺",
+            "ms": 0
+          }
+        },
+        "T14": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s3",
+              "demo-s1"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "T15": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s5",
+              "demo-s1",
+              "demo-s3"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "T16": {
+          "B0": {
+            "correct": false,
+            "fabricated": false,
+            "recommended": [
+              "demo-s1",
+              "demo-s2",
+              "demo-s4"
+            ],
+            "why": "店铺集合不对",
+            "ms": 0
+          }
+        },
+        "T17": {
+          "B0": {
+            "correct": true,
+            "fabricated": false,
+            "recommended": [
+              "demo-s4",
+              "demo-s2"
+            ],
+            "why": "",
+            "ms": 0
+          }
+        }
+      }
+    }
+  }
+}

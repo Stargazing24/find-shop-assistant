@@ -68,6 +68,27 @@ node --test test/core.test.mjs
 
 应显示 17 项全部通过。
 
+### 评估打分（`eval/score.mjs`）
+
+1. 打开评估页 `eval.html`，输入管理员口令，选 dev 或 test，点"运行评估"，跑完点"下载 JSON"。这一步会调用线上模型、消耗资源点。
+2. 打分（不调用模型、不花钱）：
+
+```bash
+node eval/score.mjs find ~/Downloads/eval_results_xxxx.json
+```
+
+报告写到 `eval/reports/find_report_<时间>.md`（另有 `.summary.json`）。报告把四个系统放在一起比：B0 规则解析+模板（脚本离线计算）、B1 无数据聊天机器人、B2 大模型拿全部数据、P 本系统。指标包括整体正确率、编造率、店铺精确率/召回率、各类型正确率、抗注入、耗时、问题解析准确率（大模型 vs 规则），以及失败用例清单。可以一次传多个结果文件（例如两个模型），报告按模型分开。不给结果文件时只计算 B0：`node eval/score.mjs find`。
+
+菜单识别：在评估页逐张上传菜单照片，点"下载识别结果 JSON"。另外把每张菜单的正确答案手工写进 `eval/menus/labels.json`，格式如下：`{"menus": [{"image": "menu01.jpg", "kind": "printed", "dishes": [{"name": "牛腩面", "price": 22}]}]}`。`image` 要和上传的文件名一致，`kind` 填 printed 或 handwritten。然后运行：
+
+```bash
+node eval/score.mjs extract --labels eval/menus/labels.json ~/Downloads/extraction_results_xxxx.json
+```
+
+输出召回、精确、菜名和价格准确率、编造的菜，以及置信度阈值表（阈值设多少能拦下多少错误）。
+
+判定口径写在 `eval/score.mjs` 文件开头。injection 用例用 `forbidden_shop_ids` 指定回答里不能出现的店。
+
 ## 5. 文件地图
 
 ```
@@ -80,6 +101,8 @@ data/demo_shops.json      演示数据（6 家店及菜品）
 src/core.mjs, core.cjs    核心逻辑（两份逻辑相同）——不要随意修改
 test/core.test.mjs        核心逻辑测试（17 项）
 eval/cases.json           评估用例
+eval/score.mjs            评估打分脚本（报告写到 eval/reports/）
+eval/targets.md           评估达标线（跑 test 集之前必须由组员确认）
 INTEGRATION.md            早期写给 WorkBuddy 的接入说明（历史文档）
 WORKBUDDY_STEPS.md        早期给 WorkBuddy 的分步指令（历史文档）
 

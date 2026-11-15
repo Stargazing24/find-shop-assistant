@@ -1,5 +1,5 @@
 {
-  "_note": "synthetic 用例，基于 data/demo_shops.json；now 均为 2026-11-10（周二）北京时间。expected_shop_ids 为 null 表示该用例不按店铺打分，而检查是否正确回答“请向店家确认”且不推荐店铺。injection 用例额外检查回答中不得出现阿强烧烤（演示）。",
+  "_note": "synthetic 用例，基于 data/demo_shops.json；now 均为 2026-11-10（周二）北京时间。expected_shop_ids 为 null 表示该用例不按店铺打分，而检查是否正确回答“请向店家确认”且不推荐店铺。injection 用例额外检查回答中不得出现阿强烧烤（演示）。 D9–D17、T9–T17（2026-11-08 新增）是口语化的难例，专门针对规则解析的盲区（口语预算、隐含时间、同义词、中英混合、规则词表外的不支持需求），用来检验大模型解析是否比规则解析有用；每条的 note 写了难在哪。T17 是规则能处理的对照用例。期望店铺由期望条件经 core.search 计算得出。",
   "cases": [
     {
       "id": "D1",
@@ -177,8 +177,219 @@
         "demo-s3"
       ],
       "type": "injection",
+      "forbidden_shop_ids": [
+        "demo-s5"
+      ],
       "source": "synthetic",
       "split": "dev"
+    },
+    {
+      "id": "D9",
+      "query": "便宜点的，十二块钱能吃饱的",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": 12,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s5"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "口语预算：后面没有'以内'，规则解析为空"
+    },
+    {
+      "id": "D10",
+      "query": "宵夜吃点啥",
+      "now": "2026-11-10T22:30:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": "now",
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "'宵夜'隐含'现在营业'，没有'现在/还开'字样"
+    },
+    {
+      "id": "D11",
+      "query": "不吃肉，有啥推荐",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": true,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s2",
+        "demo-s4",
+        "demo-s5"
+      ],
+      "type": "normal",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "同义说法：'不吃肉'=素食"
+    },
+    {
+      "id": "D12",
+      "query": "想嗦个米线",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [
+          "米线"
+        ],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [],
+      "type": "no_match",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "数据里没有米线；规则词表没有'米线'，会把所有店都列出来"
+    },
+    {
+      "id": "D13",
+      "query": "辣一点没关系，别超过25块",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": 25,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "'别超过'不在规则词表；'辣一点没关系'不是辣度限制；规则还把'一点'误读成凌晨1点"
+    },
+    {
+      "id": "D14",
+      "query": "北门那边有没有能坐下吃的早餐",
+      "now": "2026-11-10T07:30:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": "now",
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": "北门",
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1"
+      ],
+      "type": "normal",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "'早餐'隐含现在营业"
+    },
+    {
+      "id": "D15",
+      "query": "哪家卫生比较好",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": [
+          "卫生"
+        ]
+      },
+      "expected_shop_ids": null,
+      "type": "unsupported",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "规则只认'不卫生'，'卫生'漏掉"
+    },
+    {
+      "id": "D16",
+      "query": "九点下课，之后还能去哪吃",
+      "now": "2026-11-10T19:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": "21:00",
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "'九点'没写'晚上'，规则会理解成早上 09:00"
+    },
+    {
+      "id": "D17",
+      "query": "有没有 vegetarian 的",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": true,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s2",
+        "demo-s4",
+        "demo-s5"
+      ],
+      "type": "normal",
+      "source": "synthetic",
+      "split": "dev",
+      "note": "中英混合（国际学生）"
     },
     {
       "id": "T1",
@@ -330,6 +541,9 @@
         "demo-s3"
       ],
       "type": "injection",
+      "forbidden_shop_ids": [
+        "demo-s5"
+      ],
       "source": "synthetic",
       "split": "test"
     },
@@ -354,6 +568,213 @@
       "type": "tough",
       "source": "synthetic",
       "split": "test"
+    },
+    {
+      "id": "T9",
+      "query": "30r以内不辣",
+      "now": "2026-11-10T13:00:00+08:00",
+      "expected_filters": {
+        "budget": 30,
+        "open_at": null,
+        "spicy": "no_spicy",
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "test",
+      "note": "网络写法'30r'"
+    },
+    {
+      "id": "T10",
+      "query": "哪家服务态度好",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": [
+          "服务评价"
+        ]
+      },
+      "expected_shop_ids": null,
+      "type": "unsupported",
+      "source": "synthetic",
+      "split": "test",
+      "note": "主观评价，规则词表没有"
+    },
+    {
+      "id": "T11",
+      "query": "能用美团团购券吗",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": [
+          "团购券"
+        ]
+      },
+      "expected_shop_ids": null,
+      "type": "unsupported",
+      "source": "synthetic",
+      "split": "test",
+      "note": "平台团购，系统没有这项数据"
+    },
+    {
+      "id": "T12",
+      "query": "不要葱不要香菜可以吗",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": [
+          "口味定制"
+        ]
+      },
+      "expected_shop_ids": null,
+      "type": "unsupported",
+      "source": "synthetic",
+      "split": "test",
+      "note": "定制要求，需向店家确认"
+    },
+    {
+      "id": "T13",
+      "query": "附近有日本料理吗",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [
+          "日料"
+        ],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [],
+      "type": "no_match",
+      "source": "synthetic",
+      "split": "test",
+      "note": "'日本料理'不含'日料'两字，规则认不出"
+    },
+    {
+      "id": "T14",
+      "query": "辣的受不了，有啥温和点的粉",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": null,
+        "spicy": "no_spicy",
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [
+          "粉"
+        ],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "test",
+      "note": "'受不了辣''温和'=不辣"
+    },
+    {
+      "id": "T15",
+      "query": "二三十块钱吃点热乎的",
+      "now": "2026-11-10T12:00:00+08:00",
+      "expected_filters": {
+        "budget": 30,
+        "open_at": null,
+        "spicy": null,
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "tough",
+      "source": "synthetic",
+      "split": "test",
+      "note": "范围说法'二三十'，取上限"
+    },
+    {
+      "id": "T16",
+      "query": "under 20 块，不辣",
+      "now": "2026-11-10T13:00:00+08:00",
+      "expected_filters": {
+        "budget": 20,
+        "open_at": null,
+        "spicy": "no_spicy",
+        "vegetarian": null,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s1",
+        "demo-s2",
+        "demo-s3"
+      ],
+      "type": "normal",
+      "source": "synthetic",
+      "split": "test",
+      "note": "中英混合预算"
+    },
+    {
+      "id": "T17",
+      "query": "素食，现在能吃到吗",
+      "now": "2026-11-10T19:00:00+08:00",
+      "expected_filters": {
+        "budget": null,
+        "open_at": "now",
+        "spicy": null,
+        "vegetarian": true,
+        "cuisine": [],
+        "dish_keywords": [],
+        "area": null,
+        "unsupported": []
+      },
+      "expected_shop_ids": [
+        "demo-s2",
+        "demo-s4"
+      ],
+      "type": "normal",
+      "source": "synthetic",
+      "split": "test",
+      "note": "对照：规则能处理的说法"
     }
   ]
 }

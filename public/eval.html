@@ -27,9 +27,9 @@
         <div class="section-title" style="margin-top:0">找店流水线评估</div>
         <label>选择数据集</label>
         <select id="splitSelect">
-          <option value="dev">dev（开发集，8 条）</option>
-          <option value="test">test（测试集，8 条）</option>
-          <option value="all">全部（16 条）</option>
+          <option value="dev">dev（开发集）</option>
+          <option value="test">test（测试集）</option>
+          <option value="all">全部</option>
         </select>
         <div class="hint" id="caseCount"></div>
         <div class="hint" id="callCount"></div>
@@ -45,6 +45,10 @@
         <div class="section-title" style="margin-top:0">菜单识别评估</div>
         <input type="file" id="extractFile" accept="image/*">
         <button class="btn secondary" id="runExtractBtn" style="margin-top:12px" disabled>运行识别</button>
+        <div class="hint" id="extractCount">本次已识别 0 张。文件名要与标注文件 eval/menus/labels.json 里的 image 一致。</div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn secondary" id="downloadExtractBtn" disabled>下载识别结果 JSON</button>
+        </div>
         <div id="extractResult"></div>
       </div>
     </div>
@@ -139,12 +143,21 @@
               expected_shop_ids: c.expected_shop_ids,
               parser: pipeline.parser,
               parseFirstTryOk: pipeline.parseFirstTryOk,
+              parseAttempts: pipeline.parseAttempts,
               filters: pipeline.filters,
+              parsedFilters: pipeline.parsedFilters,   // 放宽之前的解析结果（打分脚本用它算解析准确率）
+              ruleFilters: pipeline.ruleFilters,
+              relaxed: pipeline.relaxed,
               candidate_shop_ids: (pipeline.candidates || []).map((x) => x.shopId),
+              unknownHoursShopIds: pipeline.unknownHoursShopIds,
               answer: pipeline.answer,
               usedTemplate: pipeline.usedTemplate,
+              templateReason: pipeline.templateReason,
               guard: pipeline.guard,
+              guardFirstTryOk: pipeline.guardFirstTryOk,
+              answerAttempts: pipeline.answerAttempts,
               timings: pipeline.timings,
+              promptVersions: pipeline.promptVersions,
             },
             b1: { answer: b1.answer, guard: b1.guard, mentionedShopIds: b1.mentionedShopIds, timings: b1.timings },
             b2: { answer: b2.answer, guard: b2.guard, mentionedShopIds: b2.mentionedShopIds, timings: b2.timings },
@@ -184,6 +197,16 @@
     });
 
     // ---- 识别评估 ----
+    let extractResults = [];   // 本次识别过的菜单（供下载给 eval/score.mjs extract）
+    $("#downloadExtractBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(extractResults, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "extraction_results_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
     $("#extractFile").addEventListener("change", async (e) => {
       const f = e.target.files[0];
       $("#runExtractBtn").disabled = !f;
@@ -195,6 +218,22 @@
       $("#extractResult").innerHTML = '<div class="loading">识别中…</div>';
       try {
         const ex = await core.runExtraction({ images: [dataUrl], callLLM: App.callLLM });
+        extractResults = extractResults.filter((r) => r.image !== f.name);
+        extractResults.push({
+          image: f.name,
+          model: App.cfg.model,
+          ran_at: new Date().toISOString(),
+          ok: ex.ok,
+          firstTryOk: ex.firstTryOk,
+          attempts: ex.attempts,
+          errors: ex.errors,
+          promptVersion: ex.promptVersion,
+          timings: ex.timings,
+          dishes: ex.dishes,
+          raw: ex.raw,
+        });
+        $("#extractCount").textContent = "本次已识别 " + extractResults.length + " 张：" + extractResults.map((r) => r.image).join("、");
+        $("#downloadExtractBtn").disabled = false;
         let html = '<div class="success" style="margin-top:8px">识别结果（' + (ex.dishes || []).length + " 道）：</div>";
         if (ex.dishes && ex.dishes.length) {
           html += '<table style="margin-top:8px"><tr><th>菜品</th><th>价格</th><th>辣度</th><th>素食</th><th>置信度</th></tr>';
